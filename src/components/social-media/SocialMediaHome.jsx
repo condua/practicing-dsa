@@ -11,6 +11,10 @@ import {
   Bell,
   Menu,
   ArrowLeft,
+  UserPlus,
+  Clock,
+  Check,
+  Link,
 } from "lucide-react";
 
 // --- MOCK DATA ---
@@ -97,6 +101,33 @@ const INITIAL_POSTS = [
   },
 ];
 
+const MOCK_NOTIFICATIONS = [
+  {
+    id: "n1",
+    text: "Cô giáo Thảo đã bình luận về bài viết của bạn.",
+    time: "5 phút trước",
+    unread: true,
+  },
+  {
+    id: "n2",
+    text: "Trần Văn Đạt đã gửi cho bạn một lời mời kết bạn.",
+    time: "1 giờ trước",
+    unread: true,
+  },
+  {
+    id: "n3",
+    text: "Lê Mai Chi đã thả 💡 vào bài viết của bạn.",
+    time: "2 giờ trước",
+    unread: false,
+  },
+  {
+    id: "n4",
+    text: "Chào mừng bạn đến với EduConnect!",
+    time: "1 ngày trước",
+    unread: false,
+  },
+];
+
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "💡"];
 
 export default function SocialLearningApp() {
@@ -109,6 +140,17 @@ export default function SocialLearningApp() {
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // Notifications State
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Friend Requests State (mocking connection statuses)
+  // 'none' | 'pending' | 'friends'
+  const [friendStatus, setFriendStatus] = useState({
+    "u-1": "friends",
+    "u-2": "none",
+    "u-3": "pending",
+  });
 
   // --- HANDLERS ---
   const handleCreatePost = (content) => {
@@ -196,6 +238,20 @@ export default function SocialLearningApp() {
     window.scrollTo(0, 0);
   };
 
+  // --- FRIEND REQUEST HANDLER ---
+  const handleToggleFriend = (userId) => {
+    setFriendStatus((prev) => {
+      const current = prev[userId] || "none";
+      let next = "none";
+      if (current === "none") next = "pending";
+      else if (current === "pending")
+        next = "none"; // Cancel request
+      else if (current === "friends") next = "none"; // Unfriend
+
+      return { ...prev, [userId]: next };
+    });
+  };
+
   // --- SEARCH LOGIC ---
   const filteredUsers = MOCK_USERS.filter((user) =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -206,6 +262,8 @@ export default function SocialLearningApp() {
     currentView === "profile" && viewedUser
       ? posts.filter((post) => post.author.id === viewedUser.id)
       : posts;
+
+  const unreadNotifCount = MOCK_NOTIFICATIONS.filter((n) => n.unread).length;
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800">
@@ -275,10 +333,56 @@ export default function SocialLearningApp() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                onBlur={() =>
+                  setTimeout(() => setShowNotifications(false), 200)
+                }
+                className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative"
+              >
+                <Bell size={20} />
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown */}
+              {showNotifications && (
+                <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <span className="font-bold text-slate-800 text-sm">
+                      Thông báo
+                    </span>
+                    <span className="text-xs text-indigo-600 cursor-pointer hover:underline">
+                      Đánh dấu đã đọc
+                    </span>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {MOCK_NOTIFICATIONS.map((notif) => (
+                      <div
+                        key={notif.id}
+                        className={`p-3 border-b border-slate-50 flex gap-3 hover:bg-slate-50 cursor-pointer transition-colors ${notif.unread ? "bg-indigo-50/40" : ""}`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                          <Bell size={14} />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-800 leading-snug">
+                            {notif.text}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                            <Clock size={10} /> {notif.time}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div
               className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
               onClick={() => goToProfile(CURRENT_USER)}
@@ -308,6 +412,8 @@ export default function SocialLearningApp() {
             <ProfileHeader
               user={viewedUser}
               postCount={displayedPosts.length}
+              friendStatus={friendStatus[viewedUser.id] || "none"}
+              onToggleFriend={handleToggleFriend}
             />
           </div>
         ) : (
@@ -341,7 +447,35 @@ export default function SocialLearningApp() {
 
 // --- SUB COMPONENTS ---
 
-function ProfileHeader({ user, postCount }) {
+function ProfileHeader({ user, postCount, friendStatus, onToggleFriend }) {
+  const isMe = user.id === CURRENT_USER.id;
+
+  // Determine button style and text based on connection status
+  let btnConfig = {
+    text: "Kết bạn",
+    icon: UserPlus,
+    classes:
+      "bg-indigo-600 hover:bg-indigo-700 text-white border border-transparent",
+  };
+
+  if (friendStatus === "pending") {
+    btnConfig = {
+      text: "Đã gửi yêu cầu",
+      icon: Clock,
+      classes:
+        "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300",
+    };
+  } else if (friendStatus === "friends") {
+    btnConfig = {
+      text: "Bạn bè",
+      icon: Check,
+      classes:
+        "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200",
+    };
+  }
+
+  const BtnIcon = btnConfig.icon;
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       {/* Cover Photo */}
@@ -355,9 +489,13 @@ function ProfileHeader({ user, postCount }) {
             alt={user.name}
             className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 shadow-sm"
           />
-          {user.id !== CURRENT_USER.id && (
-            <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors shadow-sm mb-2">
-              Theo dõi
+          {!isMe && (
+            <button
+              onClick={() => onToggleFriend(user.id)}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors shadow-sm mb-2 ${btnConfig.classes}`}
+            >
+              <BtnIcon size={16} />
+              {btnConfig.text}
             </button>
           )}
         </div>
@@ -372,8 +510,10 @@ function ProfileHeader({ user, postCount }) {
               viết
             </div>
             <div>
-              <span className="font-bold text-slate-800">120</span> người theo
-              dõi
+              <span className="font-bold text-slate-800">
+                {friendStatus === "friends" ? 121 : 120}
+              </span>{" "}
+              người theo dõi
             </div>
           </div>
         </div>
@@ -429,6 +569,7 @@ function Post({ post, onReact, onComment, onUserClick }) {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
 
   const totalReactions = Object.values(post.reactions).reduce(
     (a, b) => a + b,
@@ -444,8 +585,13 @@ function Post({ post, onReact, onComment, onUserClick }) {
     setCommentText("");
   };
 
+  const handleShare = () => {
+    setShowShareToast(true);
+    setTimeout(() => setShowShareToast(false), 2000); // Ẩn toast sau 2 giây
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-visible">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-visible relative">
       {/* Post Header */}
       <div className="p-4 flex items-start justify-between">
         <div className="flex gap-3">
@@ -537,6 +683,14 @@ function Post({ post, onReact, onComment, onUserClick }) {
           </div>
         )}
 
+        {/* Share Success Toast */}
+        {showShareToast && (
+          <div className="absolute bottom-full right-4 mb-2 bg-slate-800 text-white text-xs px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 z-20">
+            <Link size={14} />
+            Đã sao chép liên kết!
+          </div>
+        )}
+
         <div className="flex-1 flex justify-center">
           <button
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors font-medium text-sm ${post.userReacted ? "text-indigo-600" : "text-slate-600 hover:bg-slate-50"}`}
@@ -570,7 +724,10 @@ function Post({ post, onReact, onComment, onUserClick }) {
         </div>
 
         <div className="flex-1 flex justify-center hidden sm:flex">
-          <button className="flex-1 flex items-center justify-center gap-2 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors font-medium text-sm">
+          <button
+            onClick={handleShare}
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors font-medium text-sm"
+          >
             <Share2 size={18} />
             <span>Chia sẻ</span>
           </button>
