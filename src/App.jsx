@@ -5,7 +5,7 @@ import viteLogo from "/vite.svg";
 import Dsa from "./components/Dsa";
 import TSLearningSystem from "./components/Typescript";
 import VsatHome from "./components/vsat/VsatHome";
-
+import SocialLearningApp from "./components/social-media/SocialMediaHome";
 import "./index.css";
 function App() {
   return (
@@ -14,6 +14,7 @@ function App() {
         <Route path="/" element={<Dsa />} />
         <Route path="/typescript" element={<TSLearningSystem />} />
         <Route path="/vsat" element={<VsatHome />} />
+        <Route path="/social-media" element={<SocialLearningApp />} />
       </Routes>
     </BrowserRouter>
   );
